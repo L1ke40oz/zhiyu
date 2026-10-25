@@ -188,7 +188,8 @@ export function UploadDropArea({
   const { upload: send, busy, error } = useUploader(courseId, onUploaded);
   const upload = async (files: File[]) => {
     if (!files.length) return;
-    onFinished?.(await send(files));
+    const problems = await send(files);
+    onFinished?.(problems);
   };
   // nested areas (dialog inside the reader page) must not upload the same drop twice
   const own = (event: React.DragEvent) => {
