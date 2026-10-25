@@ -4,6 +4,48 @@
 
 手机优先，五项底栏：复习计划、课件共读、我的岛屿、派对码头、个人中心。首次进入只显示海面与登记处，演示资料不会自动写入新用户空间。
 
+## 运行截图
+
+以下图片为仓库当前版本的本地运行实拍，使用示例课程和讲义。共读截图展示未配置模型时的原文检索模式。
+
+### 海岛首页
+
+登记课程、查看地块生长状态，并在同一座岛上管理本学期的学习内容。
+
+![知屿桌面端海岛首页](./docs/screenshots/island-desktop.png)
+
+### 手机端
+
+<table>
+  <tr>
+    <th>我的岛屿</th>
+    <th>复习计划</th>
+    <th>学习足迹</th>
+  </tr>
+  <tr>
+    <td><img src="./docs/screenshots/island-mobile.png" alt="手机端海岛与课程地块" width="240" /></td>
+    <td><img src="./docs/screenshots/review-mobile.png" alt="手机端复习任务与课件来源" width="240" /></td>
+    <td><img src="./docs/screenshots/activity-mobile.png" alt="个人中心的学习记录与热力图" width="240" /></td>
+  </tr>
+</table>
+
+<details>
+<summary>展开查看课件共读与派对码头</summary>
+
+### 课件共读
+
+阅读课件时展开悬浮共读伙伴，提问并查看带来源的资料摘录。
+
+![课件阅读与悬浮共读问答](./docs/screenshots/reader-desktop.png)
+
+### 派对码头
+
+通过房间号或二维码加入派对，让手机成为小游戏手柄。
+
+![派对码头与房间入口](./docs/screenshots/party-desktop.png)
+
+</details>
+
 ## 本地启动
 
 需要 Node.js 24 或更新的兼容版本。
