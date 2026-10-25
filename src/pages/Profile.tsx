@@ -6,9 +6,10 @@ import { SunIcon } from 'naive-icons/icons/SunIcon';
 import type { ActivityDay, Capabilities, Course, Profile as ProfileType } from '../../shared/types';
 import { api, messageOf } from '../api';
 import { PageHeading, ErrorNote } from '../components/Shared';
-import { setSeaAudio } from '../audio';
+import { playClickSound, setSeaAudio } from '../audio';
 import IslandEmblem from '../components/IslandEmblem';
 import ModelSettings from '../components/ModelSettings';
+import WebSearchSettings from '../components/WebSearchSettings';
 
 export default function Profile({
   courses,
@@ -156,6 +157,23 @@ export default function Profile({
           <span>
             <VolumeIcon size={20} />
             <span>
+              <b>点击音效</b>
+              <small>点图标时，听一声轻轻的「啵」</small>
+            </span>
+          </span>
+          <Switch
+            aria-label="点击音效"
+            checked={profile.clickSound}
+            onChange={(value) => {
+              if (value) playClickSound('toggle');
+              void update({ clickSound: value });
+            }}
+          />
+        </label>
+        <label className="preference-row">
+          <span>
+            <VolumeIcon size={20} />
+            <span>
               <b>海浪音效</b>
               <small>一点轻轻的海声，默认静音</small>
             </span>
@@ -221,6 +239,7 @@ export default function Profile({
         </label>
       </section>
       <ModelSettings active={active} onChanged={onChanged} />
+      <WebSearchSettings active={active} />
       <section className="connection-status">
         <h3>共读能力</h3>
         <p>
@@ -236,6 +255,14 @@ export default function Profile({
       <footer className="profile-footer">
         <span>知屿</span>
         <p>让学习，一点点生长。</p>
+        <div className="profile-contact">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.68.08-.68 1.13.08 1.72 1.16 1.72 1.16 1 1.71 2.64 1.22 3.28.93.1-.73.39-1.23.71-1.51-2.5-.29-5.13-1.25-5.13-5.56 0-1.23.44-2.23 1.16-3.02-.12-.29-.5-1.43.11-2.98 0 0 .95-.3 3.1 1.15a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.15 3.1-1.15.61 1.55.23 2.69.11 2.98.72.79 1.16 1.79 1.16 3.02 0 4.32-2.63 5.27-5.14 5.55.4.35.76 1.04.76 2.1v3.1c0 .3.2.65.78.54A11.25 11.25 0 0 0 12 .75Z" />
+          </svg>
+          <a href="https://github.com/L1ke40oz/zhiyu" target="_blank" rel="noreferrer">
+            联系我们
+          </a>
+        </div>
       </footer>
     </main>
   );

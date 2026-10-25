@@ -26,5 +26,7 @@ export const config = {
   ocr: process.env.OCR_ENABLED !== 'false',
   ocrLanguages: process.env.OCR_LANGUAGES || 'chi_sim+eng',
   partyUrl: process.env.PARTY_URL || '/party/',
+  tavilyKey: process.env.TAVILY_API_KEY || '',
+  tavilyUrl: process.env.TAVILY_API_URL || 'https://api.tavily.com/search',
 };
 export const enabled = (service: { base: string; model: string }) => Boolean(service.base && service.model);

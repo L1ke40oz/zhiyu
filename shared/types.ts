@@ -90,8 +90,21 @@ export interface ChatMessage {
   text: string;
   sections: AnswerSection[];
   sources: Source[];
-  mode: 'model' | 'extractive' | null;
+  mode: 'model' | 'vision' | 'extractive' | null;
+  images?: { id: string; name: string; url: string }[];
+  tools?: ToolActivity[];
   createdAt: string;
+}
+export interface ToolActivity {
+  id: 'vision' | 'course' | 'web' | 'answer';
+  label: string;
+  status: 'running' | 'done' | 'error';
+  pages?: { title: string; url: string }[];
+}
+export interface SearchResult {
+  sources: Source[];
+  mode: 'keyword' | 'hybrid';
+  warning: string | null;
 }
 export interface StuckPoint {
   id: string;
@@ -134,6 +147,7 @@ export interface Profile {
   timezone: string;
   reducedMotion: boolean;
   seaSound: boolean;
+  clickSound: boolean;
   dailyMinutes: number;
   /** the first-visit cloud intro has been shown on this anonymous profile */
   introSeen: boolean;

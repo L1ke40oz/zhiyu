@@ -57,6 +57,9 @@ export function deleteCourse(db: Store, owner: string, courseId: string) {
     const docs = db.all<{ id: string; status: string }>('SELECT id,status FROM documents WHERE course_id=?', courseId);
     for (const doc of docs) assertIdle(doc.status);
     const files = docs.flatMap((doc) => removeDocumentRows(db, doc.id));
+    files.push(...db.all<{ filename: string }>('SELECT filename FROM chat_images WHERE course_id=?', courseId)
+      .map((image) => path.join(config.dataDir, 'chat-images', image.filename)));
+    db.run('DELETE FROM chat_images WHERE course_id=?', courseId);
     db.run(
       'DELETE FROM attempts WHERE quiz_id IN (SELECT id FROM quizzes WHERE course_id=?)',
       courseId,

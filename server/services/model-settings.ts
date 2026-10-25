@@ -40,7 +40,7 @@ function decryptSecret(value: string) {
   decipher.setAuthTag(bytes.subarray(12, 28));
   return Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString('utf8');
 }
-function readableSecret(value: string) {
+export function readableSecret(value: string) {
   try {
     return decryptSecret(value);
   } catch {

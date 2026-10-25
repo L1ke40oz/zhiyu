@@ -23,6 +23,7 @@ export const defaultProfile: Profile = {
   timezone: 'Asia/Singapore',
   reducedMotion: false,
   seaSound: false,
+  clickSound: true,
   dailyMinutes: 15,
   introSeen: false,
 };

@@ -279,10 +279,12 @@ export function Sheet({
   title,
   onClose,
   children,
+  className = '',
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // Native dialog semantics and focus containment are implemented without clipping long content.
@@ -320,7 +322,13 @@ export function Sheet({
         }
       }}
     >
-      <section ref={ref} className="detail-sheet" role="dialog" aria-modal="true" aria-label={title}>
+      <section
+        ref={ref}
+        className={`detail-sheet ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="sheet-handle" />
         <header className="sheet-heading">
           <h2>{title}</h2>

@@ -28,6 +28,10 @@ import {
   statusText,
 } from '../components/Shared';
 import ReadingBubble from '../components/ReadingBubble';
+import MaterialSearch from '../components/MaterialSearch';
+import ToolActivity from '../components/ToolActivity';
+import { PixelIcon } from '../components/PixelIcon';
+import type { ToolActivity as Activity } from '../../shared/types';
 
 function highlightedText(text: string, highlights: Highlight[], onSelect: (quote: Highlight) => void) {
   const spans = highlights
@@ -109,6 +113,39 @@ export default function Reader({
   const [noting, setNoting] = useState(false),
     [noteText, setNoteText] = useState(''),
     [notePointId, setNotePointId] = useState('');
+  const [questionImage, setQuestionImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const imageInput = useRef<HTMLInputElement>(null);
+  const [workId, setWorkId] = useState('');
+  const [liveTools, setLiveTools] = useState<Activity[]>([]);
+  useEffect(() => {
+    if (!busy || !workId) return;
+    const controller = new AbortController();
+    const poll = () =>
+      api<{ tools: Activity[] }>(`/assistant-work/${workId}`, { signal: controller.signal })
+        .then((value) => {
+          if (!controller.signal.aborted) setLiveTools(value.tools);
+        })
+        .catch(() => {});
+    void poll();
+    const timer = window.setInterval(poll, 700);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
+  }, [busy, workId]);
+  useEffect(() => {
+    setQuestionImage(null);
+  }, [courseId]);
+  useEffect(() => {
+    if (!questionImage) {
+      setImagePreview('');
+      return;
+    }
+    const url = URL.createObjectURL(questionImage);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [questionImage]);
   const { detail, error: detailError, refresh } = useCourseDetail(courseId || null);
   const readingRef = useRef<HTMLElement>(null),
     chatEnd = useRef<HTMLDivElement>(null),
@@ -373,29 +410,59 @@ export default function Reader({
       setBusy(false);
     }
   }
+  function chooseQuestionImage(file?: File) {
+    if (!file || busy) return;
+    if (!capabilities.vision) {
+      setError('需要先配置视觉模型才能看图解题。');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024 || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setError('请选一张不超过 10MB 的 PNG、JPG 或 WebP 图片。');
+      return;
+    }
+    setError('');
+    setQuestionImage(file);
+  }
   async function ask(question = draft, quote = selection) {
-    if (!question.trim() || busy) return;
+    if ((!question.trim() && !questionImage) || busy) return;
     setBusy(true);
     setError('');
     setNotice('');
+    const requestId = uid();
+    setWorkId(requestId);
+    setLiveTools([]);
     const requestedCourse = courseId;
     try {
-      await post(`/courses/${courseId}/ask`, {
-        question: question.slice(0, 1500),
-        quote,
-        documentId: documentId || null,
-        page: currentPage ? page : null,
-      });
+      if (questionImage) {
+        const form = new FormData();
+        form.append('image', questionImage);
+        form.append('question', question.slice(0, 1500));
+        form.append('requestId', requestId);
+        if (documentId) form.append('documentId', documentId);
+        if (currentPage) form.append('page', String(page));
+        if (quote) form.append('quote', JSON.stringify(quote));
+        await api(`/courses/${courseId}/ask-image`, { method: 'POST', body: form });
+      } else {
+        await post(`/courses/${courseId}/ask`, {
+          question: question.slice(0, 1500),
+          requestId,
+          quote,
+          documentId: documentId || null,
+          page: currentPage ? page : null,
+        });
+      }
       const data = await api<ChatMessage[]>(`/courses/${requestedCourse}/messages`);
       if (requestedCourse === currentCourseRef.current) {
         setMessages(data);
         setDrafts((old) => ({ ...old, [requestedCourse]: '' }));
+        setQuestionImage(null);
         clearSelection();
       }
     } catch (error) {
       setError(messageOf(error));
     } finally {
       setBusy(false);
+      setWorkId('');
     }
   }
   function jump(source: Source) {
@@ -447,6 +514,9 @@ export default function Reader({
               }}
             />
           </div>
+          {courseId ? (
+            <MaterialSearch key={courseId} courseId={courseId} documentId={documentId} onSource={jump} />
+          ) : null}
           {detail?.documents.length ? (
             <>
               <div className="document-bar">
@@ -766,143 +836,248 @@ export default function Reader({
                     </div>
                   )}
                 </section>
-                <ReadingBubble
-                  open={mode === 'chat'}
-                  onToggle={() => setMode((old) => (old === 'chat' ? 'document' : 'chat'))}
-                >
-                  <section className="chat-pane" aria-label="共读问答区域">
-                    <div className="chat-capability">
-                      <span className="live-dot" />
-                      {capabilities.chat ? 'AI 共读伙伴' : '原文检索已就绪'}
-                      <small>{capabilities.chat ? '回答会标明资料依据' : '连接 AI 后可获得进一步讲解'}</small>
-                    </div>
-                    <ErrorNote>{error}</ErrorNote>
-                    <div className="chat-messages">
-                      {!messages.length ? (
-                        <div className="chat-welcome">
-                          <ChatIcon size={35} />
-                          <h3>不懂的地方，可以慢慢问。</h3>
-                          <p>
-                            {capabilities.chat
-                              ? '试着问一个概念，或者选中一段课件一起讨论。'
-                              : '先输入资料中的关键词，看看相关原文。AI 服务稍后可由项目配置启用。'}
-                          </p>
-                          {currentPage?.text ? (
-                            <button
-                              className="suggestion"
-                              onClick={() =>
-                                setDrafts((old) => ({
-                                  ...old,
-                                  [courseId]:
-                                    currentPage.text
-                                      .split(/[\n。]/)
-                                      .find((value) => value.trim().length > 3)
-                                      ?.slice(0, 45) || '这页讲了什么？',
-                                }))
-                              }
-                            >
-                              从当前页开始
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : (
-                        messages.map((message) =>
-                          message.role === 'user' ? (
-                            <div className="user-message" key={message.id}>
-                              {message.text}
-                            </div>
-                          ) : (
-                            <article className="assistant-message" key={message.id}>
-                              <div className="assistant-caption">
-                                <span className="tiny-leaf" />
-                                {message.mode === 'extractive' ? '找到这些资料摘录' : '一起看看'}
-                              </div>
-                              {message.sections.map((section, index) => (
-                                <div className="answer-section" key={index}>
-                                  <span className={`basis-label ${section.basis}`}>
-                                    {section.basis === 'course_material' ? '课程资料' : '通用补充 · 请核实'}
-                                  </span>
-                                  <p>{section.text}</p>
-                                  {section.sourceChunkIds.map((sourceId) => {
-                                    const source = message.sources.find((source) => source.id === sourceId);
-                                    return source ? (
-                                      <button
-                                        className="source-link"
-                                        key={sourceId}
-                                        onClick={() => jump(source)}
-                                      >
-                                        {source.documentName} · 第 {source.page} 页
-                                      </button>
-                                    ) : null;
-                                  })}
-                                </div>
-                              ))}
-                            </article>
-                          ),
-                        )
-                      )}
-                      {busy ? (
-                        <div className="thinking" role="status">
-                          <i />
-                          <i />
-                          <i />
-                          <span>正在查找资料…</span>
-                        </div>
-                      ) : null}
-                      <div ref={chatEnd} />
-                    </div>
-                    <form
-                      className="chat-composer"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void ask();
-                      }}
-                    >
-                      {selection ? (
-                        <div className="quoted-selection">
-                          第 {selection.page} 页：{selection.text.slice(0, 80)}
-                          <button className="text-button" type="button" onClick={clearSelection}>
-                            取消
-                          </button>
-                        </div>
-                      ) : null}
-                      <textarea
-                        aria-label="向共读伙伴提问"
-                        value={draft}
-                        onChange={(event) => setDrafts((old) => ({ ...old, [courseId]: event.target.value }))}
-                        maxLength={1000}
-                        placeholder="问一个概念，或说说你卡在哪里…"
-                        rows={2}
-                      />
-                      <button
-                        className="send-button"
-                        aria-label="发送问题"
-                        disabled={!draft.trim() || busy || !pages.length}
-                      >
-                        <SendIcon size={21} />
-                      </button>
-                    </form>
-                    {messages.length ? (
-                      <button
-                        className="complete-reading text-button"
-                        onClick={async () => {
-                          try {
-                            await post(`/courses/${courseId}/reading-complete`, { sessionId: uid() });
-                            setNotice('这次共读已记录，去个人中心看看足迹吧。');
-                            onChanged();
-                          } catch (error) {
-                            setError(messageOf(error));
-                          }
-                        }}
-                      >
-                        记录这次共读
-                      </button>
-                    ) : null}
-                  </section>
-                </ReadingBubble>
               </div>
             </>
           )}
+          <ReadingBubble
+            open={mode === 'chat'}
+            onToggle={() => setMode((old) => (old === 'chat' ? 'document' : 'chat'))}
+          >
+            <section
+              className="chat-pane"
+              aria-label="共读问答区域"
+              onDragOver={(event) => {
+                if (Array.from(event.dataTransfer.types).includes('Files')) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }
+              }}
+              onDrop={(event) => {
+                if (Array.from(event.dataTransfer.types).includes('Files')) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  chooseQuestionImage(event.dataTransfer.files[0]);
+                }
+              }}
+            >
+              <div className="chat-capability">
+                <span className="live-dot" />
+                {capabilities.chat || capabilities.vision ? 'AI 共读伙伴' : '原文检索已就绪'}
+                <small>
+                  {capabilities.vision
+                    ? '可上传习题图片，回答保留资料依据'
+                    : capabilities.chat
+                      ? '回答会标明资料依据'
+                      : '连接 AI 后可获得进一步讲解'}
+                </small>
+              </div>
+              <ErrorNote>{error}</ErrorNote>
+              <div className="chat-messages">
+                {!messages.length ? (
+                  <div className="chat-welcome">
+                    <ChatIcon size={35} />
+                    <h3>不懂的地方，可以慢慢问。</h3>
+                    <p>
+                      {capabilities.chat
+                        ? '试着问一个概念，或者选中一段课件一起讨论。'
+                        : capabilities.vision
+                          ? '上传一道习题图片，我会结合课程资料帮你逐步解答。'
+                          : '先输入资料中的关键词，看看相关原文。AI 服务稍后可由项目配置启用。'}
+                    </p>
+                    {currentPage?.text ? (
+                      <button
+                        className="suggestion"
+                        onClick={() =>
+                          setDrafts((old) => ({
+                            ...old,
+                            [courseId]:
+                              currentPage.text
+                                .split(/[\n。]/)
+                                .find((value) => value.trim().length > 3)
+                                ?.slice(0, 45) || '这页讲了什么？',
+                          }))
+                        }
+                      >
+                        从当前页开始
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  messages.map((message) =>
+                    message.role === 'user' ? (
+                      <div className="user-message" key={message.id}>
+                        {message.images?.map((image) => (
+                          <a href={image.url} target="_blank" rel="noreferrer" key={image.id}>
+                            <img className="chat-question-image" src={image.url} alt={image.name} />
+                          </a>
+                        ))}
+                        {message.text}
+                      </div>
+                    ) : (
+                      <article className="assistant-message" key={message.id}>
+                        <ToolActivity tools={message.tools || []} />
+                        <div className="assistant-caption">
+                          <span className="tiny-leaf" />
+                          {message.mode === 'extractive'
+                            ? '找到这些资料摘录'
+                            : message.mode === 'vision'
+                              ? '看图解题'
+                              : '一起看看'}
+                        </div>
+                        {message.sections.map((section, index) => (
+                          <div className="answer-section" key={index}>
+                            <span className={`basis-label ${section.basis}`}>
+                              {section.basis === 'course_material'
+                                ? '课程资料'
+                                : section.basis === 'web'
+                                  ? '联网补充 · 网页来源'
+                                  : message.mode === 'vision'
+                                    ? '图片分析与解题 · 请核实'
+                                    : '通用补充 · 请核实'}
+                            </span>
+                            <p>{section.text}</p>
+                            {section.externalSources.map((source) => (
+                              <a
+                                className="source-link web-source-link"
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                key={source.url}
+                              >
+                                {source.title} ↗
+                              </a>
+                            ))}
+                            {section.sourceChunkIds.map((sourceId) => {
+                              const source = message.sources.find((source) => source.id === sourceId);
+                              return source ? (
+                                <button className="source-link" key={sourceId} onClick={() => jump(source)}>
+                                  {source.documentName} · 第 {source.page} 页
+                                </button>
+                              ) : null;
+                            })}
+                          </div>
+                        ))}
+                      </article>
+                    ),
+                  )
+                )}
+                {busy ? (
+                  <div className="thinking-status" role="status">
+                    <ToolActivity tools={liveTools} />
+                    <div className="thinking">
+                      <span className="thinking-cloud" aria-hidden="true">
+                        <PixelIcon name="cloud" size={30} />
+                      </span>
+                      <i />
+                      <i />
+                      <i />
+                      <span>{questionImage ? '正在看图、检索资料并解答…' : '正在查找资料…'}</span>
+                    </div>
+                  </div>
+                ) : null}
+                <div ref={chatEnd} />
+              </div>
+              <form
+                className="chat-composer"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void ask();
+                }}
+              >
+                {selection ? (
+                  <div className="quoted-selection">
+                    第 {selection.page} 页：{selection.text.slice(0, 80)}
+                    <button className="text-button" type="button" onClick={clearSelection}>
+                      取消
+                    </button>
+                  </div>
+                ) : null}
+                {imagePreview ? (
+                  <div className="question-image-preview">
+                    <img src={imagePreview} alt="待发送的习题图片" />
+                    <span>{questionImage?.name}</span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      aria-label="移除习题图片"
+                      disabled={busy}
+                      onClick={() => setQuestionImage(null)}
+                    >
+                      移除
+                    </button>
+                  </div>
+                ) : null}
+                <div className="chat-image-tools">
+                  <input
+                    ref={imageInput}
+                    type="file"
+                    className="sr-only"
+                    tabIndex={-1}
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      chooseQuestionImage(file);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={busy || !capabilities.vision}
+                    title={capabilities.vision ? '上传一张习题图片，最多 10MB' : '需要先配置服务端视觉模型'}
+                    onClick={() => imageInput.current?.click()}
+                  >
+                    ＋ 上传习题图片
+                  </button>
+                  <small>{questionImage ? '可以直接发送，也可以补充问题' : 'PNG / JPG / WebP · 10MB'}</small>
+                </div>
+                <textarea
+                  aria-label="向共读伙伴提问"
+                  onPaste={(event) => {
+                    const file = Array.from(event.clipboardData.files).find((file) =>
+                      file.type.startsWith('image/'),
+                    );
+                    if (file) {
+                      event.preventDefault();
+                      chooseQuestionImage(file);
+                    }
+                  }}
+                  value={draft}
+                  onChange={(event) => setDrafts((old) => ({ ...old, [courseId]: event.target.value }))}
+                  maxLength={1000}
+                  placeholder={
+                    questionImage
+                      ? '想让 AI 怎么讲？不填也可直接解答图片中的题目。'
+                      : '问一个概念，或说说你卡在哪里…'
+                  }
+                  rows={2}
+                />
+                <button
+                  className="send-button"
+                  aria-label="发送问题"
+                  disabled={(!draft.trim() && !questionImage) || busy || !courseId}
+                >
+                  <SendIcon size={21} />
+                </button>
+              </form>
+              {messages.length ? (
+                <button
+                  className="complete-reading text-button"
+                  onClick={async () => {
+                    try {
+                      await post(`/courses/${courseId}/reading-complete`, { sessionId: uid() });
+                      setNotice('这次共读已记录，去个人中心看看足迹吧。');
+                      onChanged();
+                    } catch (error) {
+                      setError(messageOf(error));
+                    }
+                  }}
+                >
+                  记录这次共读
+                </button>
+              ) : null}
+            </section>
+          </ReadingBubble>
         </UploadDropArea>
       )}
     </main>

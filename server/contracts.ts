@@ -22,9 +22,21 @@ export const answerSchema = {
         required: ['text', 'basis', 'sourceChunkIds', 'externalSources'],
         properties: {
           text: { type: 'string', minLength: 1, maxLength: 4000 },
-          basis: { enum: ['course_material', 'general'] },
+          basis: { enum: ['course_material', 'general', 'web'] },
           sourceChunkIds: strings,
-          externalSources: { type: 'array', maxItems: 0 },
+          externalSources: {
+            type: 'array',
+            maxItems: 5,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['title', 'url'],
+              properties: {
+                title: { type: 'string', minLength: 1, maxLength: 500 },
+                url: { type: 'string', format: 'uri', maxLength: 2000 },
+              },
+            },
+          },
         },
       },
     },

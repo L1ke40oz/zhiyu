@@ -59,11 +59,16 @@ export async function retrieve(
   question: string,
   documentId?: string | null,
   page?: number,
+  options: { limit?: number; filterDocument?: boolean } = {},
 ) {
+  const filterDocument = options.filterDocument ? documentId || null : null;
   const rows = db.all<Source & { embedding: string | null }>(
     `SELECT c.id,c.document_id AS documentId,d.name AS documentName,c.page,c.text,c.embedding
-    FROM chunks c JOIN documents d ON d.id=c.document_id WHERE c.course_id=?`,
+    FROM chunks c JOIN documents d ON d.id=c.document_id WHERE c.course_id=?
+    AND (? IS NULL OR c.document_id=?)`,
     courseId,
+    filterDocument,
+    filterDocument,
   );
   const query = [...new Set(tokens(question))];
   let queryVector: number[] | null = null;
@@ -73,6 +78,7 @@ export async function retrieve(
   } catch {
     warning = '向量服务暂不可用，本次使用原文关键词检索。';
   }
+  let usedSemantic = false;
   const ranked = rows
     .map((row) => {
       const lower = row.text.toLowerCase();
@@ -81,7 +87,15 @@ export async function retrieve(
       let semantic = 0;
       if (queryVector && row.embedding) {
         try {
-          semantic = cosine(queryVector, JSON.parse(row.embedding));
+          const vector = JSON.parse(row.embedding);
+          if (
+            Array.isArray(vector) &&
+            vector.length === queryVector.length &&
+            vector.every((value) => typeof value === 'number' && Number.isFinite(value))
+          ) {
+            semantic = cosine(queryVector, vector);
+            usedSemantic = true;
+          }
         } catch {
           /* old index can be rebuilt */
         }
@@ -95,10 +109,10 @@ export async function retrieve(
     })
     .filter((item) => item.relevant)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .slice(0, Math.max(1, Math.min(20, options.limit || 5)));
   return {
     sources: ranked.map(({ row: { embedding: _embedding, ...source } }) => source),
     warning,
-    mode: queryVector ? 'hybrid' : 'keyword',
+    mode: usedSemantic ? 'hybrid' : 'keyword',
   };
 }

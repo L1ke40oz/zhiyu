@@ -22,7 +22,7 @@ import Review from './pages/Review';
 import Reader, { type ReadingTarget } from './pages/Reader';
 import Profile from './pages/Profile';
 import Party from './pages/Party';
-import { setSeaAudio } from './audio';
+import { playControlSound, setSeaAudio } from './audio';
 
 type Tab = 'review' | 'read' | 'islands' | 'party' | 'profile';
 interface Bootstrap {
@@ -142,6 +142,9 @@ export default function App() {
   return (
     <div
       className={`app-shell ${tab === 'islands' ? 'at-sea' : ''} ${intro === 'fog' ? 'intro-revealing' : ''}`}
+      onClickCapture={(event) => {
+        if (event.isTrusted && data?.profile.clickSound) playControlSound(event.target);
+      }}
       onPointerDown={() => {
         if (data?.profile.seaSound) setSeaAudio(true);
       }}

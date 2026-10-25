@@ -55,6 +55,18 @@ export function openDatabase(filename = path.join(config.dataDir, 'zhiyu.sqlite'
       prompt TEXT NOT NULL, options TEXT NOT NULL, correct_option_id TEXT NOT NULL, explanation TEXT NOT NULL,
       source_ids TEXT NOT NULL, mode TEXT NOT NULL, created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS chat_images (
+      id TEXT PRIMARY KEY, message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      owner TEXT NOT NULL REFERENCES profiles(id), course_id TEXT NOT NULL REFERENCES courses(id),
+      filename TEXT NOT NULL, name TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS chat_images_course ON chat_images(course_id,owner);
+    CREATE TABLE IF NOT EXISTS web_settings (
+      owner TEXT PRIMARY KEY REFERENCES profiles(id), mode TEXT NOT NULL DEFAULT 'site', secret TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS message_tools (
+      message_id TEXT PRIMARY KEY REFERENCES messages(id) ON DELETE CASCADE, events TEXT NOT NULL DEFAULT '[]'
+    );
     CREATE TABLE IF NOT EXISTS attempts (
       id TEXT PRIMARY KEY, quiz_id TEXT NOT NULL REFERENCES quizzes(id), owner TEXT NOT NULL,
       option_id TEXT NOT NULL, correct INTEGER NOT NULL, hinted INTEGER NOT NULL, result TEXT NOT NULL,

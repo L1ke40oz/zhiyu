@@ -210,3 +210,20 @@ test('开场引导按匿名身份只出现一次：新 cookie 重新出现，其
   const cleared = client();
   assert.equal((await cleared.call('/bootstrap')).body.profile.introSeen, false);
 });
+
+test('点击音效独立保存、校验并隔离；旧资料补齐默认值后修改设置不丢失偏好', async () => {
+  const fresh = client();
+  assert.equal((await fresh.call('/bootstrap')).body.profile.clickSound, true);
+  assert.equal((await fresh.call('/profile', { clickSound: false }, 'PATCH')).body.clickSound, false);
+  assert.equal((await fresh.call('/profile', { dailyMinutes: 20 }, 'PATCH')).body.clickSound, false);
+  assert.equal((await fresh.call('/bootstrap')).body.profile.clickSound, false);
+  assert.equal((await fresh.call('/profile', { clickSound: 'yes' }, 'PATCH')).status, 422);
+  const other = client();
+  assert.equal((await other.call('/bootstrap')).body.profile.clickSound, true);
+  const owner = other.cookie.split('=')[1];
+  db.run('UPDATE profiles SET settings=? WHERE id=?', JSON.stringify({ timezone: 'Asia/Singapore', dailyMinutes: 15, seaSound: false, reducedMotion: false }), owner);
+  const migrated = await other.call('/profile', { dailyMinutes: 30 }, 'PATCH');
+  assert.equal(migrated.body.clickSound, true);
+  assert.equal(migrated.body.seaSound, false);
+  assert.equal((await other.call('/bootstrap')).body.profile.clickSound, true);
+});

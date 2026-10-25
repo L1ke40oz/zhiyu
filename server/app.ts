@@ -38,6 +38,9 @@ import {
 } from './services/model-settings.ts';
 import { repairLegacyTitles } from './services/structure.ts';
 import { deleteCourse, deleteDocument } from './services/removal.ts';
+import { installReaderTools, messageImages } from './reader-tools.ts';
+import { assistantWork, messageTools, runAssistantWork } from './services/assistant-work.ts';
+import { installWebSettings } from './services/web-search.ts';
 
 declare global {
   namespace Express {
@@ -718,9 +721,18 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     db.run('UPDATE stuck SET resolved=? WHERE id=?', req.body.resolved ? 1 : 0, String(req.params.stuckId));
     res.json({ ok: true });
   });
+  installReaderTools(app, db, modelLimit, readingQuote);
+  installWebSettings(app, db);
+  app.get('/api/assistant-work/:requestId', (req, res) => {
+    const progress = assistantWork(req.owner, String(req.params.requestId));
+    if (!progress) throw new AppError(404, '没有找到这次问答进度。');
+    res.json(progress);
+  });
   app.get('/api/courses/:courseId/messages', (req, res) => {
     const courseId = String(req.params.courseId);
     requireCourse(db, req.owner, courseId);
+    const images = messageImages(db, req.owner, courseId);
+    const tools = messageTools(db, courseId);
     res.json(
       db
         .all<Record<string, unknown>>(
@@ -737,6 +749,8 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
           sources: JSON.parse(String(row.sources)),
           mode: row.mode,
           createdAt: row.created_at,
+          images: images.get(String(row.id)) || [],
+          tools: tools.get(String(row.id)) || [],
         })),
     );
   });
@@ -749,17 +763,20 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     if (documentId && !db.get('SELECT id FROM documents WHERE id=? AND course_id=?', documentId, courseId))
       throw new AppError(422, '资料不属于当前课程。');
     const quote = req.body.quote ? readingQuote(req, req.body.quote) : undefined;
-    const answer = await answerQuestion(
+    const answer = await runAssistantWork(req.owner, req.body.requestId, notify => answerQuestion(
       db,
       courseId,
       question,
       quote?.documentId || documentId,
       quote?.page || page,
       quote,
-    );
+      undefined,
+      notify,
+    ));
     const messageId = id(),
       timestamp = now();
     db.transaction(() => {
+      requireCourse(db, req.owner, courseId);
       db.run(
         'INSERT INTO messages(id,course_id,document_id,role,text,created_at) VALUES(?,?,?,?,?,?)',
         id(),
@@ -781,6 +798,7 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
         answer.mode,
         timestamp,
       );
+      db.run('INSERT INTO message_tools(message_id,events) VALUES(?,?)', messageId, JSON.stringify(answer.tools));
     });
     res.json({
       id: messageId,
@@ -969,15 +987,16 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     res.json([...days.values()]);
   });
   app.patch('/api/profile', (req, res) => {
-    const profile: Profile = JSON.parse(
-      db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings,
-    );
+    const profile: Profile = {
+      ...defaultProfile,
+      ...JSON.parse(db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings),
+    };
     if (req.body.timezone !== undefined) {
       if (typeof req.body.timezone !== 'string' || !validateTimezone(req.body.timezone))
         throw new AppError(422, '时区无效。');
       profile.timezone = req.body.timezone;
     }
-    for (const key of ['reducedMotion', 'seaSound', 'introSeen'] as const)
+    for (const key of ['reducedMotion', 'seaSound', 'clickSound', 'introSeen'] as const)
       if (req.body[key] !== undefined) {
         if (typeof req.body[key] !== 'boolean') throw new AppError(422, '设置值无效。');
         profile[key] = req.body[key];
