@@ -135,6 +135,8 @@ export interface Profile {
   reducedMotion: boolean;
   seaSound: boolean;
   dailyMinutes: number;
+  /** the first-visit cloud intro has been shown on this anonymous profile */
+  introSeen: boolean;
 }
 export interface ActivityDay {
   date: string;

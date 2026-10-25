@@ -127,9 +127,11 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
   app.get('/api/bootstrap', (req, res) =>
     res.json({
       courses: listCourses(db, req.owner),
-      profile: JSON.parse(
-        db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings,
-      ),
+      // older profiles predate some settings; fill them from the defaults
+      profile: {
+        ...defaultProfile,
+        ...JSON.parse(db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings),
+      },
       capabilities: {
         chat: enabled(currentChatService()),
         embeddings: enabled(config.embedding),
@@ -975,7 +977,7 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
         throw new AppError(422, '时区无效。');
       profile.timezone = req.body.timezone;
     }
-    for (const key of ['reducedMotion', 'seaSound'] as const)
+    for (const key of ['reducedMotion', 'seaSound', 'introSeen'] as const)
       if (req.body[key] !== undefined) {
         if (typeof req.body[key] !== 'boolean') throw new AppError(422, '设置值无效。');
         profile[key] = req.body[key];

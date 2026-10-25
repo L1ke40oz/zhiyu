@@ -16,6 +16,7 @@ import CourseSheet from './components/CourseSheet';
 import QuizSheet from './components/QuizSheet';
 import { COURSES_PER_SEA, MAX_COURSES } from '../shared/ocean-layout';
 import PixelIsland from './components/PixelIsland';
+import Intro from './components/Intro';
 import { PixelEmblem, PixelIcon } from './components/PixelIcon';
 import Review from './pages/Review';
 import Reader, { type ReadingTarget } from './pages/Reader';
@@ -79,6 +80,28 @@ export default function App() {
     [courses, sea],
   );
   const reducedMotion = Boolean(data?.profile.reducedMotion || systemReduced);
+  // first visit on this device (a new anonymous profile): fog parts, then tips
+  const [intro, setIntro] = useState<'off' | 'fog' | 'tips'>('off');
+  const [introRun, setIntroRun] = useState(0);
+  const introChecked = useRef(false);
+  useEffect(() => {
+    if (!data || introChecked.current) return;
+    introChecked.current = true;
+    if (!data.profile.introSeen) startIntro();
+  }, [data]);
+  function startIntro() {
+    setTab('islands');
+    setSelectedCourse(null);
+    setIntroRun((run) => run + 1);
+    setIntro('fog');
+    // remember right away, so a refresh during the intro does not replay it
+    void patch<ProfileType>('/profile', { introSeen: true })
+      .then((profile) => setData((old) => (old ? { ...old, profile } : old)))
+      .catch(() => {});
+  }
+  useEffect(() => {
+    if (tab !== 'islands' && intro === 'tips') setIntro('off');
+  }, [tab, intro]);
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(reducedMotion);
   }, [reducedMotion]);
@@ -118,7 +141,7 @@ export default function App() {
   const seaCount = Math.min(MAX_COURSES / COURSES_PER_SEA, lastSea + 1 + (lastSeaFull ? 1 : 0));
   return (
     <div
-      className={`app-shell ${tab === 'islands' ? 'at-sea' : ''}`}
+      className={`app-shell ${tab === 'islands' ? 'at-sea' : ''} ${intro === 'fog' ? 'intro-revealing' : ''}`}
       onPointerDown={() => {
         if (data?.profile.seaSound) setSeaAudio(true);
       }}
@@ -135,6 +158,17 @@ export default function App() {
                 onSelect={(id) => setSelectedCourse(id)}
                 onCreate={(slot) => setCreate(slot === null ? { sea: null, slot: null } : { sea, slot })}
               />
+              <button
+                type="button"
+                className="intro-replay-cloud"
+                aria-label="重新播放开场动画和功能引导"
+                title="点击云朵，重看引导"
+                disabled={intro === 'fog'}
+                onClick={startIntro}
+              >
+                <PixelIcon name="cloud" size={48} />
+                <span>重看引导</span>
+              </button>
               {!currentCourses.length ? (
                 <div className="px-hint">点一块空地，登记这学期的第一门课</div>
               ) : null}
@@ -198,6 +232,7 @@ export default function App() {
           </div>
           <div className="feature-container" hidden={tab !== 'profile'}>
             <Profile
+              onReplayIntro={startIntro}
               onChanged={changed}
               courses={data.courses}
               capabilities={data.capabilities}
@@ -220,6 +255,7 @@ export default function App() {
                   setSelectedCourse(null);
                 }}
                 aria-current={tab === item.id ? 'page' : undefined}
+                data-tour={item.id}
               >
                 {item.icon ? (
                   <PixelIcon name={item.icon} size={26} />
@@ -234,7 +270,9 @@ export default function App() {
           </nav>
           <CreateIsland
             open={create !== null}
-            plot={create?.slot != null && create.sea != null ? { seaId: create.sea, slotId: create.slot } : null}
+            plot={
+              create?.slot != null && create.sea != null ? { seaId: create.sea, slotId: create.slot } : null
+            }
             onClose={() => setCreate(null)}
             onCreated={(course) => {
               setCreate(null);
@@ -298,6 +336,14 @@ export default function App() {
           ) : null}
         </div>
       )}
+      {intro !== 'off' && data ? (
+        <Intro
+          key={introRun}
+          reducedMotion={reducedMotion}
+          onRevealed={() => setIntro('tips')}
+          onFinish={() => setIntro('off')}
+        />
+      ) : null}
       {toast ? (
         <div className="toast" role="status">
           {toast}

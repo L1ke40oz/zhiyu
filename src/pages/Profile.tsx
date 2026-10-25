@@ -18,7 +18,9 @@ export default function Profile({
   revision,
   onUpdate,
   onChanged,
+  onReplayIntro,
 }: {
+  onReplayIntro: () => void;
   courses: Course[];
   profile: ProfileType;
   capabilities: Capabilities;
@@ -183,6 +185,18 @@ export default function Profile({
             }}
           />
         </label>
+        <div className="preference-row">
+          <span>
+            <SunIcon size={20} />
+            <span>
+              <b>开场引导</b>
+              <small>再看一次云雾散开和功能介绍</small>
+            </span>
+          </span>
+          <button type="button" className="mini-action" onClick={onReplayIntro}>
+            重新播放
+          </button>
+        </div>
         <label className="preference-row">
           <span>
             <LeafIcon size={20} />

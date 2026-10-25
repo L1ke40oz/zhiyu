@@ -24,6 +24,7 @@ export const defaultProfile: Profile = {
   reducedMotion: false,
   seaSound: false,
   dailyMinutes: 15,
+  introSeen: false,
 };
 export class AppError extends Error {
   constructor(

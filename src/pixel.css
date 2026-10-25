@@ -988,3 +988,160 @@
 .document-bar .confirm-inline {
   align-items: center;
 }
+
+/* ---------- first-visit intro ---------- */
+.intro-replay-cloud {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  min-height: 64px;
+  padding: 0 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #365d60;
+  line-height: 1.2;
+}
+.intro-replay-cloud .pixel-icon {
+  filter: drop-shadow(0 3px 0 #24414a26);
+  transition: transform 0.12s steps(2);
+}
+.intro-replay-cloud span {
+  font-size: 10px;
+  font-weight: 800;
+  text-shadow: 0 1px 0 #ffffff80;
+}
+.intro-replay-cloud:hover:not(:disabled) .pixel-icon {
+  transform: translateY(-2px);
+}
+.intro-replay-cloud:active:not(:disabled) .pixel-icon {
+  transform: translateY(1px);
+}
+.intro-replay-cloud:focus-visible {
+  outline: 2px solid var(--px-ink);
+  outline-offset: 3px;
+}
+.intro-fog {
+  position: fixed;
+  inset: 0;
+  width: calc(100vw + 10px);
+  height: calc(100vh + 10px);
+  z-index: 80;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* the island comes into focus as the fog parts */
+.intro-revealing .px-island {
+  animation: island-reveal 3.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes island-reveal {
+  0%,
+  20% {
+    filter: blur(9px) saturate(0.55) brightness(1.15);
+    transform: scale(1.07);
+  }
+  100% {
+    filter: none;
+    transform: none;
+  }
+}
+.intro-tips {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none; /* never blocks the page */
+}
+.cloud-bubble {
+  position: absolute;
+  width: 268px;
+  pointer-events: auto;
+  animation: cloud-in 0.45s steps(4) both;
+}
+.cloud-bubble.floating {
+  animation:
+    cloud-in 0.45s steps(4) both,
+    cloud-float 4.2s ease-in-out 0.45s infinite;
+}
+.cloud-canvas {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.cloud-body {
+  position: relative;
+  padding: 14px 18px 10px;
+  color: #4b3c2a;
+}
+.cloud-body b {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+  color: #3f7d55;
+  letter-spacing: 1px;
+}
+.cloud-body p {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.cloud-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cloud-dots {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: auto;
+}
+.cloud-dots i {
+  width: 6px;
+  height: 6px;
+  background: #cfdedd;
+}
+.cloud-dots i.on {
+  background: #5ea463;
+}
+.cloud-skip,
+.cloud-next {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cloud-skip {
+  color: #9aa9a6;
+}
+.cloud-next {
+  color: #3f7d55;
+}
+.cloud-next::after {
+  content: ' ›';
+}
+.cloud-skip:hover,
+.cloud-next:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@keyframes cloud-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+}
+@keyframes cloud-float {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+html[data-reduced-motion='true'] .intro-revealing .px-island {
+  animation-duration: 0.6s;
+}

@@ -16,9 +16,29 @@ const COLORS: Record<string, string> = {
   m: '#e48a74',
   b: '#6ea9cf',
   B: '#4f86ad',
+  c: '#d0e6e7',
+  C: '#a8ccd1',
 };
 
 const ICONS = {
+  cloud: [
+    '................',
+    '................',
+    '......CCC.......',
+    '.....CwwwC......',
+    '....CwwwwwCCC...',
+    '..CCCwwwwwwwwC..',
+    '.CwwwwwwwwwwwC..',
+    '.CwwwwwwwwwwwwC.',
+    'CwwwwwwwwwwwwwC.',
+    'CwwwwwwwwwwwwwC.',
+    '.CwwwwwwwwwwwC..',
+    '.CcccccccccccC..',
+    '..CCCCCCCCCCC...',
+    '................',
+    '................',
+    '................',
+  ],
   review: [
     '................',
     '....k......k....',

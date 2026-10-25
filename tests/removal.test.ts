@@ -199,3 +199,14 @@ test('卡点和“这里不懂”自动关联到所在页的知识点，并进�
   assert.equal(db.get<{ point_id: string }>('SELECT point_id FROM stuck WHERE id=?', fromReader.body.id)!.point_id, point.id);
   assert.equal(db.get<{ unfamiliar: number }>('SELECT unfamiliar FROM points WHERE id=?', point.id)!.unfamiliar, 1);
 });
+
+test('开场引导按匿名身份只出现一次：新 cookie 重新出现，其他用户不受影响', async () => {
+  const fresh = client();
+  assert.equal((await fresh.call('/bootstrap')).body.profile.introSeen, false);
+  assert.equal((await fresh.call('/profile', { introSeen: true }, 'PATCH')).status, 200);
+  assert.equal((await fresh.call('/bootstrap')).body.profile.introSeen, true);
+  assert.equal((await fresh.call('/profile', { introSeen: 'yes' }, 'PATCH')).status, 422);
+  // a cleared cookie is a new anonymous profile, so the intro shows again
+  const cleared = client();
+  assert.equal((await cleared.call('/bootstrap')).body.profile.introSeen, false);
+});
