@@ -1,0 +1,106 @@
+/* 公共样式：贴纸风（粗黑描边 + 实心硬阴影 + 高饱和色），手机端与大屏共用 */
+
+:root {
+  --ink: #111214;
+  --paper: #fff8e7;
+  --yellow: #ffd23f;
+  --green: #22b35e;
+  --red: #e53935;
+  --blue: #2d9cdb;
+  --muted: #e8e0cc;
+  --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Noto Sans SC", "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--yellow);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen { position: fixed; inset: 0; }
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.card {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.btn {
+  font: inherit;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  padding: 14px 28px;
+  box-shadow: 0 5px 0 var(--ink);
+  cursor: pointer;
+  transition: transform .06s, box-shadow .06s;
+}
+.btn:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 0 0 var(--ink); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn-primary { background: var(--yellow); }
+.btn-dark { background: var(--ink); color: var(--yellow); }
+.btn-block { display: block; width: 100%; }
+
+.avatar {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 22px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+
+.fine { font-size: 13px; font-weight: 600; opacity: .7; }
+.error {
+  max-width: 340px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-left: 10px solid var(--red);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* AI 主持人台词气泡 */
+.say {
+  max-width: 560px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+  line-height: 1.5;
+  padding: 14px 18px;
+  border-radius: 18px;
+  animation: pop .3s cubic-bezier(.2, 1.6, .4, 1);
+}
+
+@keyframes pop {
+  from { transform: scale(.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

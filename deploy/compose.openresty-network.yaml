@@ -1,0 +1,13 @@
+# 仅用于 OpenResty 运行在 bridge 网络的情况。
+# 与根目录 compose.yaml 一起使用；OPENRESTY_NETWORK 填现有网络的实际名称。
+services:
+  zhiyu:
+    networks:
+      default:
+        aliases:
+          - zhiyu-app
+
+networks:
+  default:
+    external: true
+    name: ${OPENRESTY_NETWORK:?请在根目录 .env 设置现有 OpenResty Docker 网络名}

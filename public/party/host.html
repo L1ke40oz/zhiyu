@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><base href="/party/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>派对码头 · 大屏</title><link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/host.css">
+<link rel="stylesheet" href="css/zhiyu-theme.css"></head>
+<body class="host">
+
+  <!-- 首页 -->
+  <section id="v-home" class="view center">
+    <div class="brand-xl">派对码头</div>
+    <p class="tagline">掏出手机就是手柄 · 一起放松一下 · 最多 8 人</p>
+    <button id="btn-create" class="btn btn-dark btn-xl" type="button" disabled>创建房间</button>
+    <p class="fine">点击后会开启主持人语音，请打开电脑声音</p>
+  </section>
+
+  <!-- 大厅 -->
+  <section id="v-lobby" class="view lobby" hidden>
+    <div class="card join-panel">
+      <div id="qr" class="qr"></div>
+      <div class="fine">扫码加入，或打开</div>
+      <div id="join-url" class="join-url"></div>
+      <div class="fine">房间号</div>
+      <div id="room-code" class="room-code"></div>
+      <div id="https-warn" class="warn" hidden>当前不是 HTTPS，手机将无法使用摄像头和陀螺仪</div>
+    </div>
+    <div class="lobby-right">
+      <h2>玩家 <span id="player-count">0</span> / <span id="player-max">8</span></h2>
+      <div id="player-grid" class="player-grid"></div>
+      <button id="btn-start" class="btn btn-dark btn-xl" type="button" disabled>开始派对</button>
+    </div>
+  </section>
+
+  <!-- 关卡开场 -->
+  <section id="v-intro" class="view center intro" hidden>
+    <div id="intro-round" class="intro-round"></div>
+    <div id="intro-verb" class="intro-verb"></div>
+    <div id="intro-title" class="intro-title"></div>
+    <div id="intro-hint" class="intro-hint"></div>
+  </section>
+
+  <!-- 游戏中：每位玩家一条赛道 -->
+  <section id="v-play" class="view play" hidden>
+    <header class="play-head">
+      <span id="play-verb" class="play-verb"></span>
+      <span id="play-title" class="play-title"></span>
+      <div class="play-timer"><i id="play-timer-fill"></i></div>
+    </header>
+    <div id="lanes" class="lanes"></div>
+  </section>
+
+  <!-- 本关结算 -->
+  <section id="v-result" class="view result" hidden>
+    <h2 id="result-title"></h2>
+    <div id="result-list" class="rank-list"></div>
+  </section>
+
+  <!-- 终局 -->
+  <section id="v-final" class="view final" hidden>
+    <h2>最终排名</h2>
+    <div id="podium" class="podium"></div>
+    <div id="final-rest" class="rank-list small"></div>
+    <div class="final-actions">
+      <button id="btn-again" class="btn btn-dark" type="button">再来一局</button>
+      <button id="btn-lobby" class="btn" type="button">回到大厅</button>
+    </div>
+  </section>
+
+  <!-- AI 主持人：所有画面共用 -->
+  <div id="mc" class="mc" hidden>
+    <div class="mc-face">🎙️</div>
+    <div id="mc-text" class="mc-text"></div>
+  </div>
+
+  <div id="room-badge" class="room-badge" hidden></div>
+  <div id="net-banner" class="net-banner" hidden>与服务器断开，正在重连…</div>
+
+  <script type="module" src="js/host.js"></script>
+<a class="back-to-islands" href="/">返回学习群岛</a></body>
+</html>
+

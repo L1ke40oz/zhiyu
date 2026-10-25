@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><base href="/party/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ffd23f">
+  <title>派对码头 · 手柄</title><link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/phone.css">
+<link rel="stylesheet" href="css/zhiyu-theme.css"></head>
+<body class="phone">
+
+  <!-- 加入 -->
+  <section id="s-join" class="screen center">
+    <div class="brand">派对<br>码头</div>
+    <p class="sub">你的手机就是手柄</p>
+    <form id="join-form" class="card join-card" autocomplete="off">
+      <label>房间号<input id="in-code" maxlength="4" inputmode="latin" autocapitalize="characters" placeholder="ABCD" required></label>
+      <label>昵称<input id="in-name" maxlength="8" placeholder="最多 8 个字" required></label>
+      <button class="btn btn-primary btn-block" type="submit">加入派对</button>
+    </form>
+    <p id="join-error" class="error" hidden></p>
+    <p class="fine">会请求 陀螺仪 / 摄像头 / 麦克风 权限，画面和声音只在手机本地处理</p>
+  </section>
+
+  <!-- 大厅 / 等待 -->
+  <section id="s-lobby" class="screen center" hidden>
+    <div id="me-avatar" class="avatar avatar-xl"></div>
+    <div id="me-name" class="me-name"></div>
+    <div class="card status-card">
+      <div id="lobby-status">等待主持人开始…</div>
+      <div class="fine">房间 <b id="lobby-code"></b> · <span id="lobby-count">1</span> 人已加入</div>
+    </div>
+    <div id="perm-list" class="perm-list"></div>
+    <p class="fine">保持屏幕常亮，看大屏幕！</p>
+  </section>
+
+  <!-- 关卡开场 -->
+  <section id="s-intro" class="screen center intro" hidden>
+    <div id="intro-round" class="intro-round"></div>
+    <div id="intro-verb" class="intro-verb"></div>
+    <div id="intro-title" class="intro-title"></div>
+    <div id="intro-hint" class="intro-hint"></div>
+    <div class="intro-bar"><i></i></div>
+  </section>
+
+  <!-- 游戏中 -->
+  <section id="s-play" class="screen play" hidden>
+    <div class="play-top">
+      <span id="play-verb" class="play-verb"></span>
+      <div class="play-timer"><i id="play-timer-fill"></i></div>
+    </div>
+    <div id="stage" class="stage"></div>
+    <div id="play-done" class="play-done" hidden>
+      <div id="done-text" class="done-text"></div>
+      <div class="fine">等待其他玩家…</div>
+    </div>
+  </section>
+
+  <!-- 本关结果 -->
+  <section id="s-result" class="screen center" hidden>
+    <div id="res-rank" class="res-rank"></div>
+    <div id="res-gain" class="res-gain"></div>
+    <div id="res-total" class="fine"></div>
+    <div id="res-say" class="say" hidden></div>
+  </section>
+
+  <!-- 终局 -->
+  <section id="s-final" class="screen center" hidden>
+    <div class="fine">最终排名</div>
+    <div id="final-rank" class="res-rank"></div>
+    <div id="final-score" class="res-gain"></div>
+    <div id="final-say" class="say" hidden></div>
+    <p class="fine">看大屏幕，等主持人开下一局</p>
+  </section>
+
+  <div id="net-banner" class="net-banner" hidden>连接中断，正在重连…</div>
+
+  <script type="module" src="js/phone.js"></script>
+<a class="back-to-islands" href="/">返回学习群岛</a></body>
+</html>
+

@@ -1,0 +1,19 @@
+services:
+  zhiyu:
+    build: .
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3100
+      DATA_DIR: /app/data
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3100}:3100"
+    volumes:
+      - zhiyu-data:/app/data
+    stop_grace_period: 30s
+
+volumes:
+  zhiyu-data:
