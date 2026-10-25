@@ -23,6 +23,18 @@
 
 个人 API 设置保存在 SQLite，加密文件是 `DATA_DIR/api-encryption.key`；现有 Compose 持久化卷同时覆盖两者。迁移和恢复时整体备份该卷，文件丢失后旧个人 Key 无法解密，需要重新填写。
 
+个人中心可分别配置问答、Embedding 向量模型和视觉模型。每项独立选择站点默认或个人 API，个人配置保存后立即对当前学习空间的新请求生效，无需重启服务；后台课件处理也使用所属用户的模型。Embedding 与视觉的连接测试会实际发送短文本向量／小图片请求。
+
+硅基流动向量配置示例（Key 只填写在服务器 `.env` 或个人中心）：
+
+```dotenv
+EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
+EMBEDDING_API_KEY=填写你的完整Key
+EMBEDDING_MODEL=BAAI/bge-m3
+```
+
+基础地址通常填写到 `/v1`；应用也兼容误填完整 `/embeddings` 或 `/chat/completions` 地址，避免重复追加路径。服务器修改 `.env` 后，运行 `docker compose -p zhiyu up -d --force-recreate` 让容器重新读取配置。更换 Embedding 模型后，进入课件共读为已有课件点击「更新资料检索索引」，无需重传；个人中心切换模型会清除本空间不兼容的旧向量，保留原文与学习记录，重建前使用关键词检索。
+
 ```text
 手机／浏览器
     │ HTTPS + 项目域名

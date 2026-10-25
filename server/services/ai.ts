@@ -1,9 +1,15 @@
 import { config, enabled } from '../config.ts';
 import { validate } from '../contracts.ts';
 import { AppError } from '../domain.ts';
-import { currentChatService, modelFetch } from './model-settings.ts';
+import {
+  currentChatService,
+  currentEmbeddingService,
+  currentVisionService,
+  modelFetch,
+  type ModelService,
+} from './model-settings.ts';
 
-type Service = { base: string; key: string; model: string };
+type Service = ModelService;
 export interface QuestionImage {
   data: Buffer;
   mime: string;
@@ -100,10 +106,13 @@ export async function structured<T>(
     'MODEL_VALIDATION_FAILED',
   );
 }
-export async function embeddings(texts: string[]): Promise<number[][] | null> {
-  if (!enabled(config.embedding)) return null;
-  const data = await post(config.embedding, 'embeddings', {
-    model: config.embedding.model,
+export async function embeddings(
+  texts: string[],
+  service = currentEmbeddingService(),
+): Promise<number[][] | null> {
+  if (!enabled(service)) return null;
+  const data = await post(service, 'embeddings', {
+    model: service.model,
     input: texts.map((text) => text.slice(0, 7000)),
   });
   if (!Array.isArray(data?.data) || data.data.length !== texts.length)
@@ -125,10 +134,10 @@ export async function embeddings(texts: string[]): Promise<number[][] | null> {
     throw new Error('向量服务返回无效数据');
   return vectors;
 }
-export async function describePage(png: Buffer): Promise<string | null> {
-  if (!enabled(config.vision)) return null;
-  const result = await post(config.vision, 'chat/completions', {
-    model: config.vision.model,
+export async function describePage(png: Buffer, service = currentVisionService()): Promise<string | null> {
+  if (!enabled(service)) return null;
+  const result = await post(service, 'chat/completions', {
+    model: service.model,
     max_tokens: 3000,
     messages: [
       {

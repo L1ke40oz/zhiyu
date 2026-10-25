@@ -10,6 +10,7 @@ import { AppError, id, now, requireCourse } from './domain.ts';
 import { retrieve } from './services/retrieval.ts';
 import { answerQuestion } from './services/learning.ts';
 import { runAssistantWork } from './services/assistant-work.ts';
+import { currentVisionService } from './services/model-settings.ts';
 
 export function messageImages(db: Store, owner: string, courseId: string) {
   const images = new Map<string, { id: string; name: string; url: string }[]>();
@@ -72,7 +73,7 @@ export function installReaderTools(
     (req, res, next) => {
       try {
         requireCourse(db, req.owner, String(req.params.courseId));
-        if (!enabled(config.vision))
+        if (!enabled(currentVisionService()))
           throw new AppError(503, '视觉模型尚未配置，暂时无法看图解题。', 'VISION_NOT_CONFIGURED');
       } catch (error) {
         next(error);

@@ -239,12 +239,24 @@ export default function Profile({
         </label>
       </section>
       <ModelSettings active={active} onChanged={onChanged} />
+      <ModelSettings kind="embedding" active={active} onChanged={onChanged} />
+      <ModelSettings kind="vision" active={active} onChanged={onChanged} />
       <WebSearchSettings active={active} />
       <section className="connection-status">
         <h3>共读能力</h3>
         <p>
           <i className={capabilities.chat ? 'available' : ''} />
           {capabilities.chat ? 'AI 讲解已连接' : 'AI 讲解尚未启用，原文检索可用'}
+        </p>
+        <p>
+          <i className={capabilities.embeddings ? 'available' : ''} />
+          {capabilities.embeddings
+            ? '向量模型已配置，资料索引就绪后可语义检索'
+            : '向量模型未配置，使用关键词检索'}
+        </p>
+        <p>
+          <i className={capabilities.vision ? 'available' : ''} />
+          {capabilities.vision ? '视觉模型已配置，可上传习题图片' : '视觉模型尚未配置'}
         </p>
         <p>
           <i className={capabilities.ocr ? 'available' : ''} />

@@ -1,6 +1,7 @@
 import type { Store } from '../db.ts';
 import type { Source } from '../../shared/types.ts';
 import { embeddings } from './ai.ts';
+import { AppError } from '../domain.ts';
 
 const stop = new Set([
   '这个',
@@ -75,8 +76,8 @@ export async function retrieve(
   let warning: string | null = null;
   try {
     queryVector = (await embeddings([question]))?.[0] || null;
-  } catch {
-    warning = '向量服务暂不可用，本次使用原文关键词检索。';
+  } catch (error) {
+    warning = `向量服务暂不可用，本次使用原文关键词检索。${error instanceof AppError ? error.message : ''}`;
   }
   let usedSemantic = false;
   const ranked = rows
@@ -110,6 +111,8 @@ export async function retrieve(
     .filter((item) => item.relevant)
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.max(1, Math.min(20, options.limit || 5)));
+  if (queryVector && rows.length && !usedSemantic)
+    warning = '资料尚无匹配的向量索引，请在课件共读点击「更新资料检索索引」。本次使用原文关键词检索。';
   return {
     sources: ranked.map(({ row: { embedding: _embedding, ...source } }) => source),
     warning,

@@ -93,6 +93,11 @@ export function openDatabase(filename = path.join(config.dataDir, 'zhiyu.sqlite'
       owner TEXT PRIMARY KEY REFERENCES profiles(id), mode TEXT NOT NULL DEFAULT 'site',
       base TEXT NOT NULL DEFAULT '', model TEXT NOT NULL DEFAULT '', secret TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS service_model_settings (
+      owner TEXT NOT NULL REFERENCES profiles(id), kind TEXT NOT NULL,
+      mode TEXT NOT NULL DEFAULT 'site', base TEXT NOT NULL DEFAULT '',
+      model TEXT NOT NULL DEFAULT '', secret TEXT NOT NULL DEFAULT '', PRIMARY KEY(owner,kind)
+    );
     CREATE TABLE IF NOT EXISTS highlights (
       id TEXT PRIMARY KEY, owner TEXT NOT NULL REFERENCES profiles(id),
       document_id TEXT NOT NULL REFERENCES documents(id), page INTEGER NOT NULL,

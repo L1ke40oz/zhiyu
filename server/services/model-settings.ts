@@ -8,11 +8,20 @@ import { Agent, fetch as safeFetch } from 'undici';
 import { config, enabled } from '../config.ts';
 import { AppError } from '../domain.ts';
 import type { Store } from '../db.ts';
+import type { ModelKind } from '../../shared/types.ts';
 
 export type ModelService = { base: string; key: string; model: string; personal?: boolean };
 type SettingsRow = { mode: string; base: string; model: string; secret: string };
-const context = new AsyncLocalStorage<ModelService>();
-export const currentChatService = () => context.getStore() || config.llm;
+const context = new AsyncLocalStorage<Record<ModelKind, ModelService>>();
+export const currentChatService = (): ModelService => context.getStore()?.chat || config.llm;
+export const currentEmbeddingService = (): ModelService => context.getStore()?.embedding || config.embedding;
+export const currentVisionService = (): ModelService => context.getStore()?.vision || config.vision;
+export const siteService = (kind: ModelKind) => (kind === 'chat' ? config.llm : config[kind]);
+export function readModelSettings(db: Store, owner: string, kind: ModelKind = 'chat') {
+  return kind === 'chat'
+    ? db.get<SettingsRow>('SELECT * FROM model_settings WHERE owner=?', owner)
+    : db.get<SettingsRow>('SELECT * FROM service_model_settings WHERE owner=? AND kind=?', owner, kind);
+}
 let master: Buffer | undefined;
 function masterKey() {
   if (master) return master;
@@ -47,26 +56,34 @@ export function readableSecret(value: string) {
     return '';
   } // A missing/corrupt encryption file must not lock the owner out of settings.
 }
-export function settingsSummary(db: Store, owner: string) {
-  const row = db.get<SettingsRow>('SELECT * FROM model_settings WHERE owner=?', owner);
+export function settingsSummary(db: Store, owner: string, kind: ModelKind = 'chat') {
+  const row = readModelSettings(db, owner, kind);
   const hasKey = Boolean(row?.secret && readableSecret(row.secret));
   return {
     mode: row?.mode || 'site',
     base: row?.base || '',
     model: row?.model || '',
     hasKey,
-    siteConfigured: enabled(config.llm),
-    configured: row?.mode === 'personal' ? Boolean(row.base && row.model && hasKey) : enabled(config.llm),
+    siteConfigured: enabled(siteService(kind)),
+    configured:
+      row?.mode === 'personal' ? Boolean(row.base && row.model && hasKey) : enabled(siteService(kind)),
   };
 }
-export function ownerService(db: Store, owner: string): ModelService {
-  const row = db.get<SettingsRow>('SELECT * FROM model_settings WHERE owner=?', owner);
-  if (row?.mode !== 'personal') return config.llm;
+export function ownerService(db: Store, owner: string, kind: ModelKind = 'chat'): ModelService {
+  const row = readModelSettings(db, owner, kind);
+  if (row?.mode !== 'personal') return siteService(kind);
   const key = readableSecret(row.secret);
   return { base: key ? row.base : '', model: row.model, key, personal: true };
 }
 export function withOwnerModel<T>(db: Store, owner: string, fn: () => T): T {
-  return context.run(ownerService(db, owner), fn);
+  return context.run(
+    {
+      chat: ownerService(db, owner),
+      embedding: ownerService(db, owner, 'embedding'),
+      vision: ownerService(db, owner, 'vision'),
+    },
+    fn,
+  );
 }
 export function publicAddress(address: string) {
   if (isIP(address) === 4) {
@@ -118,8 +135,14 @@ export function normalizeBase(value: unknown, origin = config.publicOrigin) {
     throw new AppError(422, '个人 API 需要使用公开的 HTTPS 服务地址。');
   return url.href.replace(/\/+$/, '');
 }
+export function modelBase(value: string) {
+  return value
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/(?:embeddings|chat\/completions)$/, '');
+}
 export async function modelFetch(service: ModelService, route: string, init: RequestInit) {
-  const url = `${service.base.replace(/\/+$/, '')}/${route}`;
+  const url = `${modelBase(service.base)}/${route}`;
   if (!service.personal) return fetch(url, { ...init, redirect: 'error' });
   const normalized = new URL(normalizeBase(service.base)),
     hostname = normalized.hostname.replace(/^\[|\]$/g, '');

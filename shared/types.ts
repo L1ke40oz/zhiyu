@@ -48,6 +48,7 @@ export interface Highlight extends ReadingQuote {
   id: string;
   createdAt: string;
 }
+export type ModelKind = 'chat' | 'embedding' | 'vision';
 export interface ModelSettings {
   mode: 'site' | 'personal';
   base: string;

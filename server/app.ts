@@ -29,6 +29,8 @@ import { answerQuestion, generateQuiz } from './services/learning.ts';
 import { embeddings } from './services/ai.ts';
 import {
   currentChatService,
+  currentEmbeddingService,
+  currentVisionService,
   withOwnerModel,
   settingsSummary,
   encryptSecret,
@@ -41,6 +43,7 @@ import { deleteCourse, deleteDocument } from './services/removal.ts';
 import { installReaderTools, messageImages } from './reader-tools.ts';
 import { assistantWork, messageTools, runAssistantWork } from './services/assistant-work.ts';
 import { installWebSettings } from './services/web-search.ts';
+import { installServiceSettings } from './services/service-settings.ts';
 
 declare global {
   namespace Express {
@@ -133,18 +136,21 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
       // older profiles predate some settings; fill them from the defaults
       profile: {
         ...defaultProfile,
-        ...JSON.parse(db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings),
+        ...JSON.parse(
+          db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings,
+        ),
       },
       capabilities: {
         chat: enabled(currentChatService()),
-        embeddings: enabled(config.embedding),
+        embeddings: enabled(currentEmbeddingService()),
         ocr: config.ocr,
-        vision: enabled(config.vision),
+        vision: enabled(currentVisionService()),
         party: options.party !== false,
         partyUrl: config.partyUrl,
       },
     }),
   );
+  installServiceSettings(app, db, modelLimit);
   app.get('/api/model-settings', (req, res) => res.json(settingsSummary(db, req.owner)));
   app.put('/api/model-settings', (req, res) => {
     const { mode, base, model, key } = req.body;
@@ -344,7 +350,8 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
         else if (bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP')
           mime = 'image/webp';
         else if (['.txt', '.md', '.markdown'].includes(ext) && !bytes.includes(0)) mime = 'text/plain';
-        else if (ext === '.pptx' && bytes.length > 4 && bytes.readUInt32LE(0) === 0x04034b50) mime = PPTX_MIME;
+        else if (ext === '.pptx' && bytes.length > 4 && bytes.readUInt32LE(0) === 0x04034b50)
+          mime = PPTX_MIME;
         else if (ext === '.ppt')
           throw new AppError(422, '旧版 .ppt 暂不支持，请在 PowerPoint 里另存为 .pptx 或导出 PDF。');
         else throw new AppError(422, '请上传 PDF、PPTX、PNG、JPG、WebP 或 UTF-8 文本。');
@@ -636,7 +643,8 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
   });
   app.post('/api/documents/:documentId/reindex', modelLimit, async (req, res) => {
     const doc = documentFor(req);
-    if (!enabled(config.embedding)) throw new AppError(503, '向量服务尚未配置，当前仍可使用原文关键词检索。');
+    if (!enabled(currentEmbeddingService()))
+      throw new AppError(503, '向量服务尚未配置，当前仍可使用原文关键词检索。');
     const chunks = db.all<{ id: string; text: string }>(
       'SELECT id,text FROM chunks WHERE document_id=? ORDER BY page,rowid',
       String(doc.id),
@@ -763,16 +771,18 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     if (documentId && !db.get('SELECT id FROM documents WHERE id=? AND course_id=?', documentId, courseId))
       throw new AppError(422, '资料不属于当前课程。');
     const quote = req.body.quote ? readingQuote(req, req.body.quote) : undefined;
-    const answer = await runAssistantWork(req.owner, req.body.requestId, notify => answerQuestion(
-      db,
-      courseId,
-      question,
-      quote?.documentId || documentId,
-      quote?.page || page,
-      quote,
-      undefined,
-      notify,
-    ));
+    const answer = await runAssistantWork(req.owner, req.body.requestId, (notify) =>
+      answerQuestion(
+        db,
+        courseId,
+        question,
+        quote?.documentId || documentId,
+        quote?.page || page,
+        quote,
+        undefined,
+        notify,
+      ),
+    );
     const messageId = id(),
       timestamp = now();
     db.transaction(() => {
@@ -798,7 +808,11 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
         answer.mode,
         timestamp,
       );
-      db.run('INSERT INTO message_tools(message_id,events) VALUES(?,?)', messageId, JSON.stringify(answer.tools));
+      db.run(
+        'INSERT INTO message_tools(message_id,events) VALUES(?,?)',
+        messageId,
+        JSON.stringify(answer.tools),
+      );
     });
     res.json({
       id: messageId,
@@ -989,7 +1003,9 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
   app.patch('/api/profile', (req, res) => {
     const profile: Profile = {
       ...defaultProfile,
-      ...JSON.parse(db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings),
+      ...JSON.parse(
+        db.get<{ settings: string }>('SELECT settings FROM profiles WHERE id=?', req.owner)!.settings,
+      ),
     };
     if (req.body.timezone !== undefined) {
       if (typeof req.body.timezone !== 'string' || !validateTimezone(req.body.timezone))

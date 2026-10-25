@@ -2,11 +2,11 @@ import { randomInt } from 'node:crypto';
 import type { AnswerSection, Source, ToolActivity } from '../../shared/types.ts';
 import type { Store } from '../db.ts';
 import { answerSchema, quizSchema } from '../contracts.ts';
-import { config, enabled } from '../config.ts';
+import { enabled } from '../config.ts';
 import { AppError, assertSourceIds, id, now, sourceRows } from '../domain.ts';
 import { describePage, structured, type QuestionImage } from './ai.ts';
 import { retrieve, tokens } from './retrieval.ts';
-import { currentChatService } from './model-settings.ts';
+import { currentChatService, currentVisionService } from './model-settings.ts';
 import type { ReadingQuote } from '../../shared/types.ts';
 import { searchWeb, webSearchKey } from './web-search.ts';
 
@@ -27,7 +27,7 @@ export async function answerQuestion(
     else tools[index] = event;
     onTools?.([...tools]);
   };
-  if (image && !enabled(config.vision))
+  if (image && !enabled(currentVisionService()))
     throw new AppError(503, '视觉模型尚未配置，暂时无法看图解题。', 'VISION_NOT_CONFIGURED');
   if (image) report({ id: 'vision', status: 'running', label: '正在识别习题图片…' });
   const imageText = image ? await describePage(image.data) : null;
@@ -168,7 +168,7 @@ export async function answerQuestion(
       )
         throw new AppError(422, '依据不足时需要在回答中明确告知。');
     },
-    image ? { service: config.vision, image } : {},
+    image ? { service: currentVisionService(), image } : {},
   );
   report({ id: 'answer', status: 'done', label: '回答已整理完成' });
   return {
