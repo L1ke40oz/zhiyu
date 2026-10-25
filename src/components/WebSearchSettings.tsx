@@ -54,7 +54,9 @@ export default function WebSearchSettings({ active }: { active: boolean }) {
   return (
     <section className="web-search-settings">
       <h2>联网搜索</h2>
-      <p>课件中找不到相近内容时，使用 Tavily 搜索网页，并在回答中标明来源。</p>
+      <p>
+        允许共读伙伴自主调用 Tavily 联网搜索，也可以直接说「帮我联网搜一下」。聊天会显示工具调用和网页来源。
+      </p>
       <div className="segmented" aria-label="联网搜索来源">
         <button
           type="button"

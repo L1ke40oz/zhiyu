@@ -40,10 +40,11 @@ import {
 } from './services/model-settings.ts';
 import { repairLegacyTitles } from './services/structure.ts';
 import { deleteCourse, deleteDocument } from './services/removal.ts';
-import { installReaderTools, messageImages } from './reader-tools.ts';
-import { assistantWork, messageTools, runAssistantWork } from './services/assistant-work.ts';
+import { installReaderTools } from './reader-tools.ts';
+import { assistantWork, runAssistantWork } from './services/assistant-work.ts';
 import { installWebSettings } from './services/web-search.ts';
 import { installServiceSettings } from './services/service-settings.ts';
+import { chatMessages, installReadingSessions } from './services/reading-sessions.ts';
 
 declare global {
   namespace Express {
@@ -736,31 +737,11 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     if (!progress) throw new AppError(404, '没有找到这次问答进度。');
     res.json(progress);
   });
+  installReadingSessions(app, db);
   app.get('/api/courses/:courseId/messages', (req, res) => {
     const courseId = String(req.params.courseId);
     requireCourse(db, req.owner, courseId);
-    const images = messageImages(db, req.owner, courseId);
-    const tools = messageTools(db, courseId);
-    res.json(
-      db
-        .all<Record<string, unknown>>(
-          'SELECT * FROM (SELECT rowid,* FROM messages WHERE course_id=? ORDER BY rowid DESC LIMIT 100) ORDER BY rowid',
-          courseId,
-        )
-        .map((row) => ({
-          id: row.id,
-          courseId,
-          documentId: row.document_id,
-          role: row.role,
-          text: row.text,
-          sections: JSON.parse(String(row.sections)),
-          sources: JSON.parse(String(row.sources)),
-          mode: row.mode,
-          createdAt: row.created_at,
-          images: images.get(String(row.id)) || [],
-          tools: tools.get(String(row.id)) || [],
-        })),
-    );
+    res.json(chatMessages(db, req.owner, courseId));
   });
   app.post('/api/courses/:courseId/ask', modelLimit, async (req, res) => {
     const courseId = String(req.params.courseId);
@@ -829,13 +810,13 @@ export function createApp(db: Store, options: { processDocuments?: boolean; part
     requireCourse(db, req.owner, courseId);
     const sessionId = requestId(req.body.sessionId);
     const userMessages = db.get<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM messages WHERE course_id=? AND role='user'",
+      "SELECT COUNT(*) AS count FROM messages WHERE course_id=? AND session_id IS NULL AND role='user'",
       courseId,
     )!.count;
     if (!userMessages) throw new AppError(422, '先完成一次提问或复习，再记录这次共读。');
     // A reading event is tied to the last assistant message, not a client-provided fresh UUID.
     const message = db.get<{ id: string }>(
-      "SELECT id FROM messages WHERE course_id=? AND role='assistant' ORDER BY rowid DESC LIMIT 1",
+      "SELECT id FROM messages WHERE course_id=? AND session_id IS NULL AND role='assistant' ORDER BY rowid DESC LIMIT 1",
       courseId,
     )!;
     db.run(

@@ -28,6 +28,8 @@ import {
   statusText,
 } from '../components/Shared';
 import ReadingBubble from '../components/ReadingBubble';
+import ChatMessages from '../components/ChatMessages';
+import ReadingSessions from '../components/ReadingSessions';
 import MaterialSearch from '../components/MaterialSearch';
 import ToolActivity from '../components/ToolActivity';
 import { PixelIcon } from '../components/PixelIcon';
@@ -136,6 +138,7 @@ export default function Reader({
   }, [busy, workId]);
   useEffect(() => {
     setQuestionImage(null);
+    setMessages([]);
   }, [courseId]);
   useEffect(() => {
     if (!questionImage) {
@@ -234,7 +237,7 @@ export default function Reader({
   useEffect(() => {
     const viewport = chatEnd.current?.parentElement;
     if (mode === 'chat' && viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [messages, mode]);
+  }, [messages, mode, busy, liveTools]);
   const currentPage = pages.find((item) => item.number === page);
   // only PDFs and images have rendered page pictures (text and PPTX do not)
   const hasOriginal =
@@ -873,7 +876,7 @@ export default function Reader({
               </div>
               <ErrorNote>{error}</ErrorNote>
               <div className="chat-messages">
-                {!messages.length ? (
+                {!messages.length && !busy ? (
                   <div className="chat-welcome">
                     <ChatIcon size={35} />
                     <h3>不懂的地方，可以慢慢问。</h3>
@@ -903,63 +906,7 @@ export default function Reader({
                     ) : null}
                   </div>
                 ) : (
-                  messages.map((message) =>
-                    message.role === 'user' ? (
-                      <div className="user-message" key={message.id}>
-                        {message.images?.map((image) => (
-                          <a href={image.url} target="_blank" rel="noreferrer" key={image.id}>
-                            <img className="chat-question-image" src={image.url} alt={image.name} />
-                          </a>
-                        ))}
-                        {message.text}
-                      </div>
-                    ) : (
-                      <article className="assistant-message" key={message.id}>
-                        <ToolActivity tools={message.tools || []} />
-                        <div className="assistant-caption">
-                          <span className="tiny-leaf" />
-                          {message.mode === 'extractive'
-                            ? '找到这些资料摘录'
-                            : message.mode === 'vision'
-                              ? '看图解题'
-                              : '一起看看'}
-                        </div>
-                        {message.sections.map((section, index) => (
-                          <div className="answer-section" key={index}>
-                            <span className={`basis-label ${section.basis}`}>
-                              {section.basis === 'course_material'
-                                ? '课程资料'
-                                : section.basis === 'web'
-                                  ? '联网补充 · 网页来源'
-                                  : message.mode === 'vision'
-                                    ? '图片分析与解题 · 请核实'
-                                    : '通用补充 · 请核实'}
-                            </span>
-                            <p>{section.text}</p>
-                            {section.externalSources.map((source) => (
-                              <a
-                                className="source-link web-source-link"
-                                href={source.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                key={source.url}
-                              >
-                                {source.title} ↗
-                              </a>
-                            ))}
-                            {section.sourceChunkIds.map((sourceId) => {
-                              const source = message.sources.find((source) => source.id === sourceId);
-                              return source ? (
-                                <button className="source-link" key={sourceId} onClick={() => jump(source)}>
-                                  {source.documentName} · 第 {source.page} 页
-                                </button>
-                              ) : null;
-                            })}
-                          </div>
-                        ))}
-                      </article>
-                    ),
-                  )
+                  <ChatMessages messages={messages} onSource={jump} />
                 )}
                 {busy ? (
                   <div className="thinking-status" role="status">
@@ -1024,7 +971,7 @@ export default function Reader({
                     type="button"
                     className="text-button"
                     disabled={busy || !capabilities.vision}
-                    title={capabilities.vision ? '上传一张习题图片，最多 10MB' : '需要先配置服务端视觉模型'}
+                    title={capabilities.vision ? '上传一张习题图片，最多 10MB' : '请先在个人中心配置视觉模型'}
                     onClick={() => imageInput.current?.click()}
                   >
                     ＋ 上传习题图片
@@ -1060,22 +1007,21 @@ export default function Reader({
                   <SendIcon size={21} />
                 </button>
               </form>
-              {messages.length ? (
-                <button
-                  className="complete-reading text-button"
-                  onClick={async () => {
-                    try {
-                      await post(`/courses/${courseId}/reading-complete`, { sessionId: uid() });
-                      setNotice('这次共读已记录，去个人中心看看足迹吧。');
-                      onChanged();
-                    } catch (error) {
-                      setError(messageOf(error));
-                    }
-                  }}
-                >
-                  记录这次共读
-                </button>
-              ) : null}
+              <ReadingSessions
+                key={courseId}
+                courseId={courseId}
+                messages={messages}
+                busy={busy}
+                onSource={jump}
+                onFinished={(saved) => {
+                  if (currentCourseRef.current !== courseId) return;
+                  setMessages([]);
+                  setDrafts((old) => ({ ...old, [courseId]: '' }));
+                  setQuestionImage(null);
+                  clearSelection();
+                  if (saved) onChanged();
+                }}
+              />
             </section>
           </ReadingBubble>
         </UploadDropArea>

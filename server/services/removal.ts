@@ -67,6 +67,7 @@ export function deleteCourse(db: Store, owner: string, courseId: string) {
     db.run('DELETE FROM quizzes WHERE course_id=?', courseId);
     db.run('DELETE FROM stuck WHERE course_id=?', courseId);
     db.run('DELETE FROM messages WHERE course_id=?', courseId);
+    db.run('DELETE FROM reading_sessions WHERE course_id=?', courseId);
     db.run('DELETE FROM points WHERE course_id=?', courseId);
     db.run('DELETE FROM chunks WHERE course_id=?', courseId);
     // keep the activity heatmap, just forget which course it belonged to

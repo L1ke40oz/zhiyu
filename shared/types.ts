@@ -83,6 +83,13 @@ export interface AnswerSection {
   sourceChunkIds: string[];
   externalSources: { title: string; url: string }[];
 }
+export interface ReadingSession {
+  id: string;
+  courseId: string;
+  title: string;
+  createdAt: string;
+  messageCount: number;
+}
 export interface ChatMessage {
   id: string;
   courseId: string;

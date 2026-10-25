@@ -50,6 +50,10 @@ export function openDatabase(filename = path.join(config.dataDir, 'zhiyu.sqlite'
       role TEXT NOT NULL, text TEXT NOT NULL, sections TEXT NOT NULL DEFAULT '[]', sources TEXT NOT NULL DEFAULT '[]',
       mode TEXT, created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS reading_sessions (
+      id TEXT PRIMARY KEY, course_id TEXT NOT NULL REFERENCES courses(id),
+      title TEXT NOT NULL, created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS quizzes (
       id TEXT PRIMARY KEY, course_id TEXT NOT NULL REFERENCES courses(id), point_id TEXT NOT NULL REFERENCES points(id),
       prompt TEXT NOT NULL, options TEXT NOT NULL, correct_option_id TEXT NOT NULL, explanation TEXT NOT NULL,
@@ -110,6 +114,10 @@ export function openDatabase(filename = path.join(config.dataDir, 'zhiyu.sqlite'
   // Stage outside the normal coordinate range to avoid UNIQUE collisions.
   db.exec('BEGIN IMMEDIATE');
   try {
+    const messageColumns = db.prepare('PRAGMA table_info(messages)').all() as { name: string }[];
+    if (!messageColumns.some((column) => column.name === 'session_id'))
+      db.exec('ALTER TABLE messages ADD COLUMN session_id TEXT REFERENCES reading_sessions(id)');
+    db.exec('CREATE INDEX IF NOT EXISTS messages_session ON messages(course_id,session_id)');
     if (!db.prepare('SELECT name FROM schema_migrations WHERE name=?').get('six-course-seas')) {
       const courses = db
         .prepare('SELECT id,sea_id,slot_id FROM courses ORDER BY owner,sea_id,slot_id')
