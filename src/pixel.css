@@ -972,13 +972,19 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 15px;
 }
 .document-bar .document-select {
   flex: 1 1 220px;
   min-width: 0;
+  margin-bottom: 0;
 }
 .document-actions {
   display: inline-flex;
+  align-items: center;
   gap: 4px;
   flex: none;
+}
+.document-bar .confirm-inline {
+  align-items: center;
 }
