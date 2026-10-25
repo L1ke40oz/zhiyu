@@ -154,6 +154,20 @@ after(async () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('原课件、渲染页和习题图片只能由所属学习空间读取', async () => {
+  fs.writeFileSync(path.join(dir, 'uploads', 'fixture'), 'private course content');
+  fs.mkdirSync(path.join(dir, 'pages', doc), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'pages', doc, '1.png'), 'private page content');
+  for (const route of [
+    `/documents/${doc}/file`,
+    `/documents/${doc}/pages/1/image`,
+    `/chat-images/${image}`,
+  ]) {
+    const own = await fetch(`${base}/api${route}`, { headers: { Cookie: `zhiyu_session=${a.owner}` } });
+    assert.equal(own.status, 200);
+    assert.equal((await b.call(route)).status, 404);
+  }
+});
 test('保存会话保留完整图片、引用和工具记录，清空当前窗口并计一次热力图', async () => {
   assert.equal((await a.call(`/courses/${course}/messages`)).body.length, 2);
   const saved = await a.call(`/courses/${course}/reading-sessions`, {

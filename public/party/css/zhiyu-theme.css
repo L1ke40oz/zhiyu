@@ -132,6 +132,18 @@ input:focus {
 .lobby {
   gap: 24px;
 }
+@media (min-width: 701px) and (max-width: 1100px) {
+  .host .lobby { padding: 48px 24px 100px; }
+  .host .join-panel { width: 260px; padding: 20px; }
+  .host .qr { width: 210px; height: 210px; }
+  .host .room-code { font-size: 46px; }
+  .host .join-url { font-size: 14px; }
+  .host .lobby-right h2 { font-size: 28px; }
+  .host .slot { height: 110px; }
+  .host .slot .avatar { width: 44px; height: 44px; font-size: 24px; }
+  .host .slot-name { font-size: 16px; }
+  .host .btn-xl { font-size: 22px; padding: 16px 30px; }
+}
 @media (max-width: 700px) {
   .host .view {
     padding: 24px 18px 75px;

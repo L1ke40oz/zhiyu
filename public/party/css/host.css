@@ -43,10 +43,12 @@ body.host { overflow: hidden; font-size: 20px; }
 .room-code { font-size: 64px; font-weight: 900; letter-spacing: 10px; line-height: 1; }
 .warn { margin-top: 8px; font-size: 15px; font-weight: 800; color: #fff; background: var(--red); padding: 8px 12px; border-radius: 10px; }
 
-.lobby-right { flex: 1; display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+.lobby-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
 .lobby-right h2 { font-size: 40px; font-weight: 900; }
-.player-grid { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.player-grid { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .slot {
+  min-width: 0;
+  overflow: hidden;
   height: 140px;
   border: 3px dashed rgba(17,18,20,.35);
   border-radius: 18px;
@@ -62,7 +64,7 @@ body.host { overflow: hidden; font-size: 20px; }
   animation: pop .3s cubic-bezier(.2, 1.6, .4, 1);
 }
 .slot .avatar { width: 64px; height: 64px; font-size: 30px; }
-.slot-name { font-size: 22px; font-weight: 900; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-name { font-size: 22px; font-weight: 900; width: 90%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
 /* ---------- 关卡开场 ---------- */
 .intro { background: var(--ink); color: #fff; }
@@ -97,10 +99,10 @@ body.host { overflow: hidden; font-size: 20px; }
   padding: 10px 18px;
   box-shadow: 0 4px 0 var(--ink);
 }
-.lane-name { width: 180px; font-size: 28px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lane-track { flex: 1; height: 28px; border: 3px solid var(--ink); border-radius: 14px; background: var(--muted); overflow: hidden; }
+.lane-name { flex: 0 0 auto; width: 180px; min-width: 0; font-size: 28px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lane-track { flex: 1; min-width: 0; height: 28px; border: 3px solid var(--ink); border-radius: 14px; background: var(--muted); overflow: hidden; }
 .lane-track i { display: block; height: 100%; width: 0; transition: width .15s linear; }
-.lane-status { width: 52px; font-size: 40px; font-weight: 900; text-align: center; }
+.lane-status { flex-shrink: 0; width: 52px; font-size: 40px; font-weight: 900; text-align: center; }
 .lane.win { background: #c9f2d7; }
 .lane.win .lane-status { color: var(--green); }
 .lane.lose { opacity: .6; }
@@ -121,7 +123,7 @@ body.host { overflow: hidden; font-size: 20px; }
 .rank-row.lose { opacity: .65; }
 .rank-no { width: 48px; font-size: 36px; font-weight: 900; text-align: center; }
 .rank-row.lose .rank-no { color: var(--red); }
-.rank-name { flex: 1; font-size: 30px; font-weight: 900; }
+.rank-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 30px; font-weight: 900; }
 .rank-gain { font-size: 34px; font-weight: 900; color: var(--green); width: 90px; text-align: right; }
 .rank-row.lose .rank-gain { color: rgba(17,18,20,.4); }
 .rank-total { font-size: 24px; font-weight: 800; width: 100px; text-align: right; }
@@ -133,7 +135,7 @@ body.host { overflow: hidden; font-size: 20px; }
 .podium-col.p1 { animation-delay: .5s; }
 .podium-col.p2 { animation-delay: .25s; }
 .avatar-lg { width: 88px; height: 88px; font-size: 42px; }
-.podium-name { font-size: 30px; font-weight: 900; }
+.podium-name { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-size: 30px; font-weight: 900; }
 .podium-score { font-weight: 800; }
 .podium-block {
   width: 100%;

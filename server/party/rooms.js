@@ -72,9 +72,11 @@ export class RoomManager {
     const room = ws.roomCode && this.rooms.get(ws.roomCode);
     if (!room) return;
     if (ws.role === 'host') {
+      if (room.host !== ws) return;
       if (msg.t === 'host:start') room.startGame();
       else if (msg.t === 'host:lobby') room.backToLobby();
     } else if (ws.role === 'player') {
+      if (room.players.get(ws.pid)?.ws !== ws) return;
       if (msg.t === 'progress') room.onProgress(ws.pid, msg);
       else if (msg.t === 'finish') room.onFinish(ws.pid, msg);
     }
@@ -155,9 +157,16 @@ class Room {
   }
 
   join(ws, msg) {
-    let player = msg.pid && this.players.get(String(msg.pid));
+    if (ws.roomCode && (ws.roomCode !== this.code || ws.role !== 'player'))
+      return send(ws, { t: 'error', code: 'already-joined', msg: '当前连接已在房间中，请先离开再加入。' });
+    const joinKey = typeof msg.joinKey === 'string' && /^[a-f0-9-]{32,80}$/i.test(msg.joinKey) ? msg.joinKey : null;
+    const bound = ws.pid && this.players.get(ws.pid);
+    let player = (bound?.ws === ws ? bound : null) ||
+      (msg.pid && this.players.get(String(msg.pid))) ||
+      (joinKey && [...this.players.values()].find((p) => p.joinKey === joinKey));
+    const sameSocket = player?.ws === ws;
     if (player) {
-      if (player.resumeToken !== msg.resumeToken) return send(ws, { t: 'error', code: 'invalid-player', msg: '无法恢复这个玩家身份，请重新加入房间。' });
+      if (!sameSocket && player.resumeToken !== msg.resumeToken && (!joinKey || player.joinKey !== joinKey)) return send(ws, { t: 'error', code: 'invalid-player', msg: '无法恢复这个玩家身份，请重新加入房间。' });
       // 断线重连：沿用原来的身份和分数
       if (player.ws && player.ws !== ws) player.ws.close(4000, 'replaced');
     } else {
@@ -167,6 +176,7 @@ class Room {
       player = {
         pid: crypto.randomBytes(8).toString('hex'),
         resumeToken: crypto.randomBytes(20).toString('hex'),
+        joinKey,
         name: this.uniqueName(cleanName(msg.name) || `玩家${this.players.size + 1}`),
         color: AVATAR_COLORS[this.players.size % AVATAR_COLORS.length],
         score: 0,
@@ -190,7 +200,7 @@ class Room {
     } else if (this.phase === 'final') {
       send(ws, { t: 'final', standings: this.standings() });
     }
-    this.broadcastLobby();
+    if (!sameSocket) this.broadcastLobby();
   }
 
   onDisconnect(ws) {
@@ -395,7 +405,11 @@ class Room {
   uniqueName(name) {
     const names = new Set([...this.players.values()].map((p) => p.name));
     if (!names.has(name)) return name;
-    for (let i = 2; ; i++) if (!names.has(`${name}${i}`)) return `${name}${i}`;
+    for (let i = 2; ; i++) {
+      const suffix = String(i);
+      const candidate = Array.from(name).slice(0, 8 - suffix.length).join('') + suffix;
+      if (!names.has(candidate)) return candidate;
+    }
   }
 
   dispose() {

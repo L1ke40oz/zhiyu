@@ -149,6 +149,7 @@ function renderLobby() {
       const name = document.createElement('div');
       name.className = 'slot-name';
       name.textContent = p.name;
+      name.title = p.name;
       cell.appendChild(name);
     } else {
       cell.textContent = '空位';
@@ -295,6 +296,7 @@ function text(className, content) {
   const el = document.createElement('div');
   el.className = className;
   el.textContent = content;
+  if (className.includes('name')) el.title = content;
   return el;
 }
 

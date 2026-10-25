@@ -12,10 +12,12 @@ export function connect({ onMessage, onOpen, onClose }) {
     const socket = new WebSocket(url);
     ws = socket;
     socket.onopen = () => {
+      if (socket !== ws || stopped) return;
       retry = 0;
       onOpen && onOpen();
     };
     socket.onmessage = (e) => {
+      if (socket !== ws || stopped) return;
       let msg;
       try {
         msg = JSON.parse(e.data);
@@ -35,12 +37,13 @@ export function connect({ onMessage, onOpen, onClose }) {
   open();
 
   // 从后台切回前台时，连接可能已被系统掐断，跳过退避立即重连
-  document.addEventListener('visibilitychange', () => {
+  function onVisibility() {
     if (document.visibilityState === 'visible' && !stopped && ws.readyState === WebSocket.CLOSED) {
       retry = 0;
       open();
     }
-  });
+  }
+  document.addEventListener('visibilitychange', onVisibility);
 
   return {
     send(obj) {
@@ -48,6 +51,8 @@ export function connect({ onMessage, onOpen, onClose }) {
     },
     close() {
       stopped = true;
+      clearTimeout(retryTimer);
+      document.removeEventListener('visibilitychange', onVisibility);
       ws && ws.close();
     },
   };

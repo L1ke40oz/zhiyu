@@ -19,6 +19,18 @@ let net = null;
 let intro = null;     // 当前关卡信息（intro 消息）
 let session = null;   // 正在进行的微游戏
 let wakeLock = null;
+let joining = false;
+let joinTimer = 0;
+let joinKey = '';
+let connectedCode = '';
+const joinButton = $('join-form').querySelector('button');
+function joiningState(pending, label = '正在加入派对…') {
+  joining = pending;
+  joinButton.disabled = pending;
+  joinButton.textContent = pending ? label : '加入派对';
+  $('in-code').disabled = pending;
+  $('in-name').disabled = pending;
+}
 
 /* ---------------- 加入 ---------------- */
 
@@ -28,6 +40,7 @@ $('in-name').value = localStorage.getItem('party.name') || '';
 
 $('join-form').addEventListener('submit', (e) => {
   e.preventDefault();
+  if (joining) return;
   const code = $('in-code').value.trim().toUpperCase();
   const name = $('in-name').value.trim();
   if (!code || !name) return;
@@ -35,25 +48,36 @@ $('join-form').addEventListener('submit', (e) => {
   localStorage.setItem('party.name', name);
   // 同一房间刷新后沿用身份（分数不丢）
   if (sessionStorage.getItem('party.code') !== code) { sessionStorage.removeItem('party.pid'); sessionStorage.removeItem('party.resumeToken'); }
+  const storageKey = `party.joinKey:${code}`;
+  joinKey = sessionStorage.getItem(storageKey) || Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  sessionStorage.setItem(storageKey, joinKey);
+  sessionStorage.setItem('party.code', code);
   me.code = code;
   me.name = name;
 
   // 必须在点击事件里同步发起：陀螺仪 + 摄像头 + 麦克风 权限
-  const perms = sensors.init();
+  joiningState(true);
+  let perms;
+  try { perms = sensors.init(); }
+  catch { perms = Promise.resolve({ motion: 'denied', camera: false, mic: false }); }
   requestWakeLock();
-  const btn = e.submitter || $('join-form').querySelector('button');
-  btn.disabled = true;
-  btn.textContent = '申请权限中…';
-  perms.then((r) => {
-    btn.disabled = false;
-    btn.textContent = '加入派对';
-    renderPerms(r);
-    startNet();
-  });
+  // Connect while permissions are being requested; a slow permission prompt must not create join retries.
+  perms.then(renderPerms).catch(() => renderPerms({ motion: 'denied', camera: false, mic: false }));
+  startNet();
+  clearTimeout(joinTimer);
+  joinTimer = setTimeout(() => {
+    if (joining) {
+      joiningState(false);
+      $('join-error').textContent = '网络响应较慢，可以重试加入；重复点击不会占用新席位。';
+      $('join-error').hidden = false;
+    }
+  }, 15000);
 });
 
 function startNet() {
+  if (net && connectedCode !== me.code) { net.close(); net = null; me.pid = null; }
   if (net) return sendJoin();
+  connectedCode = me.code;
   net = connect({
     onOpen: () => {
       $('net-banner').hidden = true;
@@ -61,13 +85,14 @@ function startNet() {
     },
     onClose: () => {
       if (me.pid) $('net-banner').hidden = false;
+      if (joining) joinButton.textContent = '连接中，正在重试…';
     },
     onMessage: handle,
   });
 }
 
 function sendJoin() {
-  net.send({ t: 'join', code: me.code, name: me.name, pid: sessionStorage.getItem('party.pid') || undefined, resumeToken: sessionStorage.getItem('party.resumeToken') || undefined });
+  net.send({ t: 'join', code: me.code, name: me.name, joinKey, pid: sessionStorage.getItem('party.pid') || undefined, resumeToken: sessionStorage.getItem('party.resumeToken') || undefined });
 }
 
 function renderPerms(r) {
@@ -103,6 +128,8 @@ document.addEventListener('visibilitychange', () => {
 function handle(msg) {
   switch (msg.t) {
     case 'error':
+      clearTimeout(joinTimer);
+      joiningState(false);
       abortGame();
       show('join');
       $('join-error').textContent = msg.msg;
@@ -111,6 +138,9 @@ function handle(msg) {
       break;
 
     case 'joined':
+      clearTimeout(joinTimer);
+      joiningState(false);
+      $('join-error').hidden = true;
       Object.assign(me, { pid: msg.pid, name: msg.name, color: msg.color });
       sessionStorage.setItem('party.pid', msg.pid);
       sessionStorage.setItem('party.resumeToken', msg.resumeToken);
@@ -118,6 +148,7 @@ function handle(msg) {
       $('me-avatar').style.background = me.color;
       $('me-avatar').textContent = Array.from(me.name)[0] || '?';
       $('me-name').textContent = me.name;
+      $('me-name').title = me.name;
       $('lobby-code').textContent = msg.code;
       if (!session) show('lobby');
       break;

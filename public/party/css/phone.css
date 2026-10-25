@@ -37,7 +37,7 @@ body.phone .screen { padding-top: calc(env(safe-area-inset-top) + 24px); padding
 
 /* ---------- 大厅 ---------- */
 .avatar-xl { width: 120px; height: 120px; font-size: 56px; box-shadow: 0 6px 0 var(--ink); }
-.me-name { font-size: 30px; font-weight: 900; }
+.me-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 30px; font-weight: 900; }
 .status-card { padding: 16px 22px; font-size: 18px; font-weight: 800; display: flex; flex-direction: column; gap: 6px; }
 .perm-list { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .perm { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 999px; border: 2px solid var(--ink); background: #fff; }
